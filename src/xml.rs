@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fmt::Debug,
     fs::File,
-    io::{self, BufReader, BufWriter},
+    io::{self, BufReader, BufWriter, Write},
     path::Path,
 };
 
@@ -12,14 +12,28 @@ use xml::{
     namespace::Namespace,
     reader::{self, XmlEvent},
     writer::{self, XmlEvent as WriteEvent},
-    EmitterConfig, EventReader, ParserConfig,
+    EmitterConfig, EventReader, EventWriter, ParserConfig,
 };
+
+struct MutBuf<'a>(&'a mut Vec<u8>);
+
+impl Write for MutBuf<'_> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        todo!()
+    }
+}
 
 pub enum TemplateError {
     Io(io::Error),
     Parse(reader::Error),
     Write(writer::Error),
     MissingProp(String),
+    MalformedProp(String),
 }
 
 impl From<io::Error> for TemplateError {
@@ -47,6 +61,11 @@ impl Debug for TemplateError {
             Self::Write(err) => Debug::fmt(&err, f),
             Self::Parse(err) => Debug::fmt(&err, f),
             Self::MissingProp(name) => write!(f, "Missing property {}.", name),
+            Self::MalformedProp(name) => write!(
+                f,
+                "Property '{}' is non-alphanumeric or reserved. (accepted: A-z 0-9 _; must not start with __).",
+                name
+            ),
         }
     }
 }
@@ -70,6 +89,8 @@ pub struct Template {
 }
 
 impl Template {
+    const PROPS_SPECIAL: [&'static str; 2] = ["__path", "__filename"];
+
     pub fn parse_from_file(
         path: &Path,
         parser_config: ParserConfig,
@@ -105,6 +126,11 @@ impl Template {
                             attributes,
                             namespace,
                         }))
+                    } else if !placeholder.chars().all(|c| c.is_alphanumeric() || c == '_')
+                        || (placeholder.starts_with("__")
+                            && !Self::PROPS_SPECIAL.contains(&placeholder.as_str()))
+                    {
+                        return Err(TemplateError::MalformedProp(placeholder));
                     } else {
                         events.push(TemplateEvent::StartPlaceholder {
                             prop: placeholder,
@@ -131,13 +157,22 @@ impl Template {
         })
     }
 
+    fn writer_config() -> EmitterConfig {
+        EmitterConfig {
+            normalize_empty_elements: false,
+            write_document_declaration: false,
+            ..Default::default()
+        }
+    }
+
     pub fn write_to_file(
         &self,
         source: BufReader<File>,
         out: BufWriter<File>,
+        out_json: BufWriter<File>,
+        mut props_map: HashMap<String, Vec<XmlEvent>>,
     ) -> Result<(), TemplateError> {
         let parser = EventReader::new_with_config(source, self.parser_config.clone());
-        let mut props_map = HashMap::new();
         let mut current_prop = None;
         let mut current_events = Vec::new();
 
@@ -167,11 +202,8 @@ impl Template {
             }
         }
 
-        let mut writer = EmitterConfig::new()
-            .perform_indent(true)
-            .normalize_empty_elements(false)
-            .write_document_declaration(false)
-            .create_writer(out);
+        let mut writer = EventWriter::new_with_config(out, Self::writer_config());
+        let mut json_map = HashMap::new();
 
         for event in self.events.clone() {
             match event {
@@ -217,18 +249,32 @@ impl Template {
                     };
                     writer.write(xml_event)?;
 
+                    let mut json_buf = Vec::new();
+                    let mut json_writer = EventWriter::new_with_config(
+                        MutBuf(&mut json_buf),
+                        EmitterConfig {
+                            perform_indent: false,
+                            ..Self::writer_config()
+                        },
+                    );
+
                     for event in props_map
                         .get(&prop)
-                        .ok_or(TemplateError::MissingProp(prop))?
+                        .ok_or(TemplateError::MissingProp(prop.clone()))?
                     {
                         let writer_event = event.as_writer_event();
                         if let Some(writer_event) = writer_event {
-                            writer.write(writer_event)?;
+                            writer.write(writer_event.clone())?;
+                            json_writer.write(writer_event)?;
                         }
                     }
+
+                    json_map.insert(prop, String::from_utf8(json_buf).unwrap());
                 }
             }
         }
+
+        serde_json::to_writer(out_json, &json_map).unwrap();
 
         Ok(())
     }

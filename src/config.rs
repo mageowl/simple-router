@@ -21,6 +21,8 @@ pub struct OutConfig {
     pub path: String,
     #[serde(default = "default_js_lib_path")]
     pub lib_file: String,
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 fn default_template_path() -> String {
