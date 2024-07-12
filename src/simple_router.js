@@ -1,6 +1,9 @@
 window.Router = {
+  pageCache: {},
+
+
   joinPath(...args) {
-    args
+    return args
       .map((part, i) => {
         if (i === 0) {
           return part.trim().replace(/[\/]*$/g, "");
@@ -24,21 +27,22 @@ window.Router = {
   },
 
   /** @param {String} href */
-  async goto(href) {
-    console.log(href);
+  async goto(href, state = {}) {
     let dataURL =
       (href.endsWith(".html")
         ? href.slice(0, -5)
         : Router.joinPath(href, "/index")) + ".page.json";
-    const page = await (await fetch(dataURL)).json();
-    console.log(page);
+    const page = Router.pageCache[dataURL] ?? await (await fetch(dataURL)).json();
 
     Object.entries(page).forEach(([prop, value]) => {
-      console.log(prop, value);
       document.querySelectorAll(`[data-sr-prop="${prop}"]`).forEach((el) => {
         el.innerHTML = value;
       });
     });
+    Router.pageCache[dataURL] = page;
+    Router.updateLinks();
+
+    history.pushState(state, "", href);
   },
 };
 
