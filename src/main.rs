@@ -64,16 +64,6 @@ fn main() {
                     .unwrap(),
             ))],
         );
-        props.insert(
-            "__filename".to_string(),
-            vec![XmlEvent::Characters(String::from(
-                page_out
-                    .strip_prefix(&config.out.path)
-                    .unwrap()
-                    .to_str()
-                    .unwrap(),
-            ))],
-        );
 
         let source = BufReader::new(File::open(page.clone()).unwrap());
 

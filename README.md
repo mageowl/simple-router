@@ -20,6 +20,34 @@ exclude = [] # list of paths to exclude from
 ignore_comments = true # remove comments from html
 ```
 
+## Templating
+
+By default, `layout.html` is a special file that contains the template for the page. All other html files are considered pages.
+
+```html
+<!-- layout.html -->
+
+<html>
+    <head>
+        <title sr-prop="title" /> <!-- This is a placeholder (denoted by sr-prop="name"). When the page gets loaded, the contents of this element will be replaced. -->
+    </head>
+    <body>
+        <!-- Properties starting with '__' are special. 
+            - `__page` = Current path -->
+        <h1 sr-prop="__page" /> 
+        <div sr-prop="content" />
+    </body>
+</html>
+
+<!-- index.html -->
+
+<content> <!-- Elements at the root of a page are considered "properties" -->
+    <p>Templating is so cool!</p> <!-- Placeholders will be filled in using properties of the same name. -->
+</content>
+<title>Hello World</title>  <!-- placeholders can contain both plain text and html. -->
+
+```
+
 ## JavaScript Interface
 
 The JavaScript library creates a `window.router` property that lets you navigate to pages. By default, all anchor elements (`a`) that link to local pages will automatically be updated to use the interface.
