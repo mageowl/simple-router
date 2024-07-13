@@ -66,7 +66,7 @@ window.router = {
     return router
       ._load(dataURL)
       .then(() => {
-        history.pushState({ ...state, dataURL }, "", href);
+        history.pushState({ ...state, dataURL, path: router.path }, "", href);
         window.dispatchEvent(new CustomEvent("navigate"));
       })
       .catch(() => {
@@ -82,7 +82,11 @@ window.router = {
             )
             .then(() => {
               history.pushState(
-                { ...state, dataURL: config.notFound + ".page.json" },
+                {
+                  ...state,
+                  dataURL: config.notFound + ".page.json",
+                  path: router.path,
+                },
                 "",
                 href,
               );
@@ -113,6 +117,7 @@ if (config.updateAnchors) {
 
 window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
+    router.path = e.state.path;
     router
       ._load(e.state.dataURL)
       .then(() => window.dispatchEvent(new CustomEvent("navigate")));
