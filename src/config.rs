@@ -64,10 +64,11 @@ impl Into<ParserConfig> for XmlConfig {
     }
 }
 
-#[derive(Deserialize, Clone, Copy)]
+#[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct JsConfig {
     pub update_anchors: bool,
+    pub not_found: String,
 }
 
 impl JsConfig {
@@ -75,10 +76,15 @@ impl JsConfig {
         format!(
             r#"const config = {{
     updateAnchors: {update_anchors},
+    notFound: "{not_found}",
 }};
 
 "#,
-            update_anchors = self.update_anchors
+            update_anchors = self.update_anchors,
+            not_found = self
+                .not_found
+                .strip_suffix(".html")
+                .unwrap_or(&self.not_found)
         )
     }
 }
@@ -87,6 +93,7 @@ impl Default for JsConfig {
     fn default() -> Self {
         Self {
             update_anchors: true,
+            not_found: String::new(),
         }
     }
 }

@@ -41,10 +41,12 @@ window.router = {
 
   /** @param {String} href Link to page relative to window.origin */
   goto(href, state = {}, includesOrigin = false) {
-    router.path = "/" + router.joinPath(
-      "",
-      includesOrigin ? href.slice(location.origin.length) : href,
-    );
+    router.path =
+      "/" +
+      router.joinPath(
+        "",
+        includesOrigin ? href.slice(location.origin.length) : href,
+      );
 
     const dataURL = router.joinPath(
       includesOrigin ? "" : location.origin,
@@ -56,14 +58,20 @@ window.router = {
     return router
       ._load(dataURL)
       .then(() => {
-        history.pushState({ ...state, dataURL }, "", href);
+        history.pushState({ ...state, dataURL, href }, "", href);
         window.dispatchEvent(new CustomEvent("navigate", { page: href }));
       })
       .catch(() => {
-        location.href = router.joinPath(
-          includesOrigin ? "" : location.origin,
-          href,
-        );
+        if (config.notFound == "") {
+          location.href = router.joinPath(
+            includesOrigin ? "" : location.origin,
+            href,
+          );
+        } else {
+          router._load(
+            router.joinPath(location.origin, config.notFound + ".page.json"),
+          );
+        }
       });
   },
 
@@ -89,5 +97,6 @@ if (config.updateAnchors) {
 window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
     router._load(e.state.dataURL);
+    window.dispatchEvent(new CustomEvent("navigate", { page: e.state.href }));
   }
 });
