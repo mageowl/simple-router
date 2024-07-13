@@ -1,5 +1,7 @@
 window.router = {
   pageCache: {},
+  /** @type {String} Current path. Always starts with '/'.*/
+  path: location.pathname,
 
   /** @param {...String} args Joins `args` together as a path. */
   joinPath(...args) {
@@ -39,18 +41,30 @@ window.router = {
 
   /** @param {String} href Link to page relative to window.origin */
   goto(href, state = {}, includesOrigin = false) {
+    router.path = "/" + router.joinPath(
+      "",
+      includesOrigin ? href.slice(location.origin.length) : href,
+    );
+
     const dataURL = router.joinPath(
       includesOrigin ? "" : location.origin,
       (href.endsWith(".html")
         ? href.slice(0, -5)
         : router.joinPath(href, "/index")) + ".page.json",
     );
-    return router._load(dataURL).then(() => {
-      history.pushState({ ...state, dataURL }, "", href);
-      window.dispatchEvent(new CustomEvent("navigate", { page: href }));
-    }).catch(() => {
-      location.href = router.joinPath(includesOrigin ? "" : location.origin, href);
-    });
+
+    return router
+      ._load(dataURL)
+      .then(() => {
+        history.pushState({ ...state, dataURL }, "", href);
+        window.dispatchEvent(new CustomEvent("navigate", { page: href }));
+      })
+      .catch(() => {
+        location.href = router.joinPath(
+          includesOrigin ? "" : location.origin,
+          href,
+        );
+      });
   },
 
   /** Internal: Do not use */
@@ -64,7 +78,7 @@ window.router = {
       });
     });
     router.pageCache[dataURL] = page;
-  }
+  },
 };
 
 window.addEventListener("load", router._updateLinks);
@@ -73,4 +87,4 @@ window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
     router._load(e.state.dataURL);
   }
-})
+});

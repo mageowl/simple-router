@@ -63,4 +63,8 @@ window.router.goto("/cat"); // Navigate to the cat folder (cat/index.html)
 const anchorElement = window.router.anchor("/cat.html");
 
 await window.router.goto("/about.html"); // Wait for the about page to load, then continue.
+
+console.log(router.path); // Print current path.
 ```
+
+Additionally, there is JSDoc in src/simple_router.js.
