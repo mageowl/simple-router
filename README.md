@@ -7,9 +7,9 @@ A very, _very_ rudementary [SSG](https://www.cloudflare.com/learning/performance
 The configuration file is located at `simple-router.toml`, and must be created for the application to work.
 
 ```toml
-[out]
+[out] # required!
 path = "path/to/output/" # required! path to output directory
-lib_file = "simple-router.js" # optional. name of JS libraries relative to output directory
+lib_file = "simple-router.js" # optional. name of JS library file relative to output directory
 
 [source] # optional.
 path = "." # path to the source directory
@@ -18,4 +18,16 @@ exclude = [] # list of paths to exclude from
 
 [xml] # optional.
 ignore_comments = true # remove comments from html
+```
+
+## JavaScript Interface
+
+The JavaScript library creates a `window.router` property that lets you navigate to pages. By default, all anchor elements (`a`) that link to local pages will automatically be updated to use the interface.
+
+```javascript
+window.router.goto("/cat.html"); // Navigate to cat.html
+
+window.router.goto("/"); // Navigate to the root (index.html)
+
+const anchorElement = window.router.anchor("/cat.html"); // Create an anchor element and set its href to '/cat.html'. Note: the href attribute doesn't actually affect where this link will go.
 ```

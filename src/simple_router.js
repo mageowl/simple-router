@@ -27,10 +27,20 @@ window.router = {
     }
   },
 
-  /** @param {String} href Link to page relative to root of page */
-  async goto(href, state = {}, origin = false) {
+  /** @param {String} href Link to page relative to window.origin */
+  anchor(href) {
+    const a = document.createElement("a");
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      router.goto(href, {}, true);
+    });
+    return a;
+  },
+
+  /** @param {String} href Link to page relative to window.origin */
+  async goto(href, state = {}, includesOrigin = false) {
     const dataURL = router.joinPath(
-      origin ? "" : location.origin,
+      includesOrigin ? "" : location.origin,
       (href.endsWith(".html")
         ? href.slice(0, -5)
         : router.joinPath(href, "/index")) + ".page.json",
