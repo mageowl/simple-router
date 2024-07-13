@@ -211,7 +211,7 @@ impl Template {
                     }
                     writer.write::<WriteEvent<'_>>(
                         WriteEvent::start_element("script")
-                            .attr("src", &self.library_path)
+                            .attr("src", &(String::from("/") + &self.library_path))
                             .into(),
                     )?;
                     writer
