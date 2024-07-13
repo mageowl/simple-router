@@ -76,15 +76,18 @@ window.router = {
             href,
           );
         } else {
-          history.pushState(
-            { ...state, dataURL: config.notFound + ".page.json" },
-            "",
-            href,
-          );
-          window.dispatchEvent(new CustomEvent("navigate"));
-          router._load(
-            router.joinPath(location.origin, config.notFound + ".page.json"),
-          );
+          router
+            ._load(
+              router.joinPath(location.origin, config.notFound + ".page.json"),
+            )
+            .then(() => {
+              history.pushState(
+                { ...state, dataURL: config.notFound + ".page.json" },
+                "",
+                href,
+              );
+              window.dispatchEvent(new CustomEvent("navigate"));
+            });
         }
       });
   },
