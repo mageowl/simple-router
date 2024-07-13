@@ -27,7 +27,12 @@ fn main() {
     let pages = copy_dir(
         &config.source.path,
         &config.out.path,
-        &config.source.exclude,
+        &config
+            .source
+            .exclude
+            .iter()
+            .map(|p| PathBuf::from(p))
+            .collect(),
     )
     .unwrap();
     println!("Done!");
@@ -105,7 +110,7 @@ fn main() {
 fn copy_dir(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
-    exclude: &Vec<impl AsRef<Path>>,
+    exclude: &Vec<PathBuf>,
 ) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     fs::create_dir_all(&dst)?;
     let mut pages = Vec::new();
@@ -114,7 +119,7 @@ fn copy_dir(
         let entry = entry?;
         let ty = entry.file_type()?;
 
-        if exclude.contains(entry.path()) {
+        if exclude.contains(&entry.path()) {
             continue;
         }
 
