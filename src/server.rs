@@ -9,6 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use mime_guess::MimeGuess;
 use notify_debouncer_mini::{notify::RecursiveMode, DebounceEventResult};
 
 use crate::{
@@ -86,10 +87,13 @@ fn handle_connection(stream: &mut TcpStream, directory: &PathBuf) -> String {
             }
 
             let status = "HTTP/1.1 200 OK";
+            let mime_type = MimeGuess::from_path(&file)
+                .first()
+                .map_or(String::new(), |mime| mime.essence_str().to_owned());
             let contents = fs::read_to_string(file).unwrap();
             let length = contents.len();
 
-            format!("{status}\r\nContent-Length: {length}\r\n\r\n{contents}")
+            format!("{status}\r\nContent-Length: {length}\r\nContent-Type: {mime_type}\r\n\r\n{contents}")
         }
         _ => {
             println!("\x1b[31m[{method}]\x1b[0m {path}");
