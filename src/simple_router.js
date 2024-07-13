@@ -96,7 +96,12 @@ if (config.updateAnchors) {
 
 window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
-    router._load(e.state.dataURL);
-    window.dispatchEvent(new CustomEvent("navigate", { page: e.state.href }));
+    router
+      ._load(e.state.dataURL)
+      .then(() =>
+        window.dispatchEvent(
+          new CustomEvent("navigate", { page: e.state.href }),
+        ),
+      );
   }
 });
