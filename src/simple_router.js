@@ -1,4 +1,7 @@
 window.router = {
+  is404: window.router?.is404 ?? false,
+
+  /** @type {Object} */
   pageCache: {},
   /** @type {String} Current path. Always starts with '/'.*/
   path: location.pathname,
@@ -73,6 +76,12 @@ window.router = {
             href,
           );
         } else {
+          history.pushState(
+            { ...state, dataURL: config.notFound + ".page.json" },
+            "",
+            href,
+          );
+          window.dispatchEvent(new CustomEvent("navigate"));
           router._load(
             router.joinPath(location.origin, config.notFound + ".page.json"),
           );
@@ -107,4 +116,12 @@ window.addEventListener("popstate", (e) => {
   }
 });
 
-history.replaceState({ dataURL: router._dataURL(router.path) }, "");
+if (history.state?.dataURL == null)
+  history.replaceState(
+    {
+      dataURL: router.is404
+        ? config.notFound + ".page.json"
+        : router._dataURL(router.path),
+    },
+    "",
+  );

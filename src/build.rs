@@ -194,10 +194,12 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
             println!("  {}", page.as_os_str().to_str().unwrap_or(""));
         }
 
+        let is_404 = page_out.ends_with(Path::new(&config.js.not_found));
+
         let out = BufWriter::new(File::create(page_out)?);
 
         template
-            .write_to_file(source, out, out_json, props)
+            .write_to_file(source, out, out_json, props, is_404)
             .map_err(|err| {
                 BuildError::from(err).with_source(page.to_str().unwrap_or("").to_string())
             })?;

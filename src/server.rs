@@ -32,8 +32,9 @@ pub fn start(port: u16, hostname: String, config: Config) {
 
     println!("\x1b[36m[SERVER]\x1b[0m Starting web server...");
 
-    let out_directory: PathBuf = config.out.path.clone().into();
-    thread::spawn(move || listen(port, hostname, out_directory));
+    let directory: PathBuf = config.out.path.clone().into();
+    let not_found: PathBuf = config.js.not_found.clone().into();
+    thread::spawn(move || listen(port, hostname, &directory, &not_found));
 
     let cfg = config.clone();
     let mut skip_next = false;
@@ -53,18 +54,18 @@ pub fn start(port: u16, hostname: String, config: Config) {
     loop {}
 }
 
-fn listen(port: u16, hostname: String, directory: PathBuf) {
+fn listen(port: u16, hostname: String, directory: &Path, not_found: &Path) {
     let listener = TcpListener::bind((hostname, port)).unwrap();
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-        let response = handle_connection(&mut stream, &directory);
+        let response = handle_connection(&mut stream, directory, not_found);
 
         stream.write_all(response.as_bytes()).unwrap();
     }
 }
 
-fn handle_connection(stream: &mut TcpStream, directory: &PathBuf) -> String {
+fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path) -> String {
     let buf_reader = BufReader::new(stream);
     let request: Vec<_> = buf_reader
         .lines()
@@ -91,10 +92,14 @@ fn handle_connection(stream: &mut TcpStream, directory: &PathBuf) -> String {
                     "\x1b[31m[404]\x1b[0m Not found: ./{}",
                     file.to_str().unwrap()
                 );
-                return format!("HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}");
-            }
-
-            if file.extension() == Some(OsStr::new("html"))
+                file = directory.join(not_found);
+                if !file.exists() {
+                    return format!(
+                        "HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}",
+                        path = path.to_string(),
+                    );
+                }
+            } else if file.extension() == Some(OsStr::new("html"))
                 || file.extension() == Some(OsStr::new("json"))
             {
                 println!("\x1b[32m[GET]\x1b[0m ./{}", file.to_str().unwrap());

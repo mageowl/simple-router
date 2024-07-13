@@ -93,7 +93,7 @@ impl Default for JsConfig {
     fn default() -> Self {
         Self {
             update_anchors: true,
-            not_found: String::from("404"),
+            not_found: String::from("404.html"),
         }
     }
 }

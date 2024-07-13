@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt::Debug,
     fs::File,
     io::{self, BufReader, BufWriter, Write},
     path::Path,
@@ -145,6 +144,7 @@ impl Template {
         EmitterConfig {
             normalize_empty_elements: false,
             write_document_declaration: false,
+            perform_escaping: false,
             ..Default::default()
         }
     }
@@ -155,6 +155,7 @@ impl Template {
         out: BufWriter<File>,
         out_json: BufWriter<File>,
         mut props_map: HashMap<String, Vec<XmlEvent>>,
+        is_404: bool,
     ) -> Result<(), TemplateError> {
         let parser = EventReader::new_with_config(source, self.parser_config.clone());
         let mut current_prop = None;
@@ -200,6 +201,14 @@ impl Template {
                     }
                 }
                 TemplateEvent::LibraryInsert => {
+                    if is_404 {
+                        writer
+                            .write::<WriteEvent<'_>>(WriteEvent::start_element("script").into())?;
+                        writer.write(WriteEvent::characters("router = {is404: true};"))?;
+                        writer.write::<WriteEvent<'_>>(
+                            WriteEvent::end_element().name("script").into(),
+                        )?;
+                    }
                     writer.write::<WriteEvent<'_>>(
                         WriteEvent::start_element("script")
                             .attr("src", &self.library_path)
