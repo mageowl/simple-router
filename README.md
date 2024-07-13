@@ -29,5 +29,9 @@ window.router.goto("/cat.html"); // Navigate to cat.html
 
 window.router.goto("/"); // Navigate to the root (index.html)
 
+window.router.goto("/cat"); // Navigate to the cat folder (cat/index.html)
+
 const anchorElement = window.router.anchor("/cat.html"); // Create an anchor element and set its href to '/cat.html'. Note: the href attribute doesn't actually affect where this link will go.
+
+await window.router.goto("/about.html"); // Wait for the about page to load, then continue.
 ```

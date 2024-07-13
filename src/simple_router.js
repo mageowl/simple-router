@@ -38,18 +38,19 @@ window.router = {
   },
 
   /** @param {String} href Link to page relative to window.origin */
-  async goto(href, state = {}, includesOrigin = false) {
+  goto(href, state = {}, includesOrigin = false) {
     const dataURL = router.joinPath(
       includesOrigin ? "" : location.origin,
       (href.endsWith(".html")
         ? href.slice(0, -5)
         : router.joinPath(href, "/index")) + ".page.json",
     );
-    await router._load(dataURL);
-
-
-    history.pushState({ ...state, dataURL }, "", href);
-    window.dispatchEvent(new CustomEvent("navigate", { page: href }));
+    return router._load(dataURL).then(() => {
+      history.pushState({ ...state, dataURL }, "", href);
+      window.dispatchEvent(new CustomEvent("navigate", { page: href }));
+    }).catch(() => {
+      location.href = router.joinPath(includesOrigin ? "" : location.origin, href);
+    });
   },
 
   /** Internal: Do not use */
