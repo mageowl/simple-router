@@ -85,7 +85,7 @@ fn handle_connection(stream: &mut TcpStream, directory: &PathBuf) -> String {
 
             if !file.exists() {
                 println!(
-                    "\x1b[31m[GET]\x1b[0m Not found: ./{}",
+                    "\x1b[31m[404]\x1b[0m Not found: ./{}",
                     file.to_str().unwrap()
                 );
                 return format!("HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}");

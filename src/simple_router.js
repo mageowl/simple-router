@@ -39,6 +39,15 @@ window.router = {
     return a;
   },
 
+  _dataURL(href, includesOrigin = false) {
+    return router.joinPath(
+      includesOrigin ? "" : location.origin,
+      (href.endsWith(".html")
+        ? href.slice(0, -5)
+        : router.joinPath(href, "/index")) + ".page.json",
+    );
+  },
+
   /** @param {String} href Link to page relative to window.origin */
   goto(href, state = {}, includesOrigin = false) {
     router.path =
@@ -48,18 +57,13 @@ window.router = {
         includesOrigin ? href.slice(location.origin.length) : href,
       );
 
-    const dataURL = router.joinPath(
-      includesOrigin ? "" : location.origin,
-      (href.endsWith(".html")
-        ? href.slice(0, -5)
-        : router.joinPath(href, "/index")) + ".page.json",
-    );
+    const dataURL = router._dataURL(href, includesOrigin);
 
     return router
       ._load(dataURL)
       .then(() => {
-        history.pushState({ ...state, dataURL, href }, "", href);
-        window.dispatchEvent(new CustomEvent("navigate", { page: href }));
+        history.pushState({ ...state, dataURL }, "", href);
+        window.dispatchEvent(new CustomEvent("navigate"));
       })
       .catch(() => {
         if (config.notFound == "") {
@@ -98,10 +102,8 @@ window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
     router
       ._load(e.state.dataURL)
-      .then(() =>
-        window.dispatchEvent(
-          new CustomEvent("navigate", { page: e.state.href }),
-        ),
-      );
+      .then(() => window.dispatchEvent(new CustomEvent("navigate")));
   }
 });
+
+history.replaceState({ dataURL: router._dataURL(router.path) }, "");
