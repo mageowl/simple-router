@@ -130,6 +130,7 @@ if (history.state?.dataURL == null)
       dataURL: router.is404
         ? config.notFound + ".page.json"
         : router._dataURL(router.path),
+      path: router.path,
     },
     "",
   );
