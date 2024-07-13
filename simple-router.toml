@@ -1,6 +1,5 @@
 [source]
 path = "test/"
-template = "test/layout.html"
 
 [out]
 path = "test_out/"

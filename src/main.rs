@@ -33,15 +33,19 @@ fn main() {
             .exclude
             .iter()
             .chain(iter::once(&config.out.path))
-            .map(|p| PathBuf::from(p))
             .collect(),
     )
     .unwrap();
     println!("Done!");
 
-    print!("Parsing template at {} ", config.source.template);
+    let template_path =
+        Into::<PathBuf>::into(config.source.path.clone()).join(&config.source.template);
+    print!(
+        "Parsing template at {} ",
+        template_path.to_str().unwrap_or("")
+    );
     let template = Template::parse_from_file(
-        &Path::new(&config.source.template),
+        &template_path,
         config.xml.into(),
         config.out.lib_file.clone(),
     )
@@ -50,7 +54,7 @@ fn main() {
 
     println!("Generating static site in {} ", config.out.path);
     for (page, page_out) in pages {
-        if page.to_str() == Some(&config.source.template) {
+        if page == template_path {
             continue;
         }
 
@@ -71,7 +75,7 @@ fn main() {
 
         let out_json = BufWriter::new(File::create(page_out.with_extension("page.json")).unwrap());
 
-        println!("  {}", page_out.as_os_str().to_str().unwrap());
+        println!("  {}", page.as_os_str().to_str().unwrap());
         let out = BufWriter::new(File::create(page_out).unwrap());
 
         template
@@ -102,7 +106,7 @@ fn main() {
 fn copy_dir(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
-    exclude: &Vec<PathBuf>,
+    exclude: &Vec<&String>,
 ) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     fs::create_dir_all(&dst)?;
     let mut pages = Vec::new();
@@ -111,7 +115,10 @@ fn copy_dir(
         let entry = entry?;
         let ty = entry.file_type()?;
 
-        if exclude.contains(&entry.path()) {
+        if exclude
+            .iter()
+            .any(|d| entry.path().starts_with(String::from("./") + d))
+        {
             continue;
         }
 
