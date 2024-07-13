@@ -60,7 +60,6 @@ fn main() {
             }
         }
         Some(("dev", subcmd)) => {
-            println!("\x1b[36mStarting web server...\x1b[0m");
             server::start(
                 *subcmd.get_one("port").unwrap(),
                 subcmd.get_one::<String>("host").unwrap().clone(),

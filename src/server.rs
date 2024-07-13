@@ -18,6 +18,17 @@ use crate::{
 };
 
 pub fn start(port: u16, hostname: String, config: Config) {
+    println!("\x1b[35m[BUILD]\x1b[0m Buildng website...");
+    let time_start = Instant::now();
+
+    build::build(Verbosity::Low, config.clone());
+
+    println!(
+        "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
+        time_start.elapsed().as_secs_f32()
+    );
+    println!("\x1b[36m[SERVER]\x1b[0m Starting web server...");
+
     let out_directory: PathBuf = config.out.path.clone().into();
     thread::spawn(move || listen(port, hostname, out_directory));
 
