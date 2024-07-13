@@ -54,22 +54,6 @@ impl From<writer::Error> for TemplateError {
     }
 }
 
-impl Debug for TemplateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Io(err) => Debug::fmt(&err, f),
-            Self::Write(err) => Debug::fmt(&err, f),
-            Self::Parse(err) => Debug::fmt(&err, f),
-            Self::MissingProp(name) => write!(f, "Missing property {}.", name),
-            Self::MalformedProp(name) => write!(
-                f,
-                "Property '{}' is non-alphanumeric or reserved. (accepted: A-z 0-9 _; must not start with __).",
-                name
-            ),
-        }
-    }
-}
-
 #[derive(Clone)]
 enum TemplateEvent {
     Xml(XmlEvent),

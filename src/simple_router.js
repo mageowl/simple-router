@@ -39,6 +39,7 @@ window.router = {
     return a;
   },
 
+  /** Internal: Do not use */
   _dataURL(href, includesOrigin = false) {
     return router.joinPath(
       includesOrigin ? "" : location.origin,

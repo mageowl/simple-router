@@ -21,12 +21,15 @@ pub fn start(port: u16, hostname: String, config: Config) {
     println!("\x1b[35m[BUILD]\x1b[0m Buildng website...");
     let time_start = Instant::now();
 
-    build::build(Verbosity::Low, config.clone());
+    if let Err(err) = build::build(Verbosity::Low, config.clone()) {
+        println!("\x1b[31m[BUILD FAILED]\x1b[31m {err}")
+    } else {
+        println!(
+            "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
+            time_start.elapsed().as_secs_f32()
+        );
+    }
 
-    println!(
-        "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
-        time_start.elapsed().as_secs_f32()
-    );
     println!("\x1b[36m[SERVER]\x1b[0m Starting web server...");
 
     let out_directory: PathBuf = config.out.path.clone().into();
@@ -127,12 +130,15 @@ fn handle_file_update(config: Config, res: DebounceEventResult) {
                 println!("\x1b[35m[BUILD]\x1b[0m Changes detected, building...");
                 let time_start = Instant::now();
 
-                build::build(Verbosity::Low, config.clone());
+                let result = build::build(Verbosity::Low, config.clone());
 
-                println!(
-                    "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
-                    time_start.elapsed().as_secs_f32()
-                );
+                match result {
+                    Ok(_) => println!(
+                        "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
+                        time_start.elapsed().as_secs_f32()
+                    ),
+                    Err(err) => println!("\x1b[31m[BUILD FAILED]\x1b[31m {err}"),
+                }
             }
         }
         Err(e) => {

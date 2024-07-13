@@ -50,13 +50,17 @@ fn main() {
             }
             let time_start = Instant::now();
 
-            build::build(verbosity, config);
+            let result = build::build(verbosity, config);
 
-            if verbosity >= Verbosity::Low {
-                println!(
-                    "\x1b[32mWebsite built in {:.2}s.\x1b[0m",
-                    time_start.elapsed().as_secs_f64()
-                )
+            if let Err(err) = result {
+                println!("\n\x1b[31mErrors while building static site: {err}.\x1b[0m");
+            } else {
+                if verbosity >= Verbosity::Low {
+                    println!(
+                        "\x1b[32mWebsite built in {:.2}s.\x1b[0m",
+                        time_start.elapsed().as_secs_f64()
+                    )
+                }
             }
         }
         Some(("dev", subcmd)) => {

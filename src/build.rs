@@ -1,14 +1,18 @@
 use std::{
     collections::HashMap,
+    fmt::Display,
     fs::{self, File},
     io::{self, BufReader, BufWriter, Write},
     iter,
     path::{Path, PathBuf},
 };
 
-use crate::config::Config;
 use crate::xml::Template;
-use xml::reader::XmlEvent;
+use crate::{config::Config, xml::TemplateError};
+use xml::{
+    reader::{self, XmlEvent},
+    writer,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Verbosity {
@@ -30,12 +34,101 @@ impl TryFrom<&str> for Verbosity {
     }
 }
 
-pub fn build(verbosity: Verbosity, config: Config) {
+pub enum BuildError {
+    Io(io::Error),
+    Parse {
+        err: reader::Error,
+        source: Option<String>,
+    },
+    Write {
+        err: writer::Error,
+        source: Option<String>,
+    },
+    Other {
+        msg: String,
+        source: Option<String>,
+    },
+}
+
+impl BuildError {
+    fn with_source(self, source: String) -> Self {
+        match self {
+            Self::Io(_) => self,
+            Self::Parse { err, .. } => Self::Parse {
+                err,
+                source: Some(source),
+            },
+            Self::Write { err, .. } => Self::Write {
+                err,
+                source: Some(source),
+            },
+            Self::Other { msg, .. } => Self::Other {
+                msg,
+                source: Some(source),
+            },
+        }
+    }
+}
+
+impl From<io::Error> for BuildError {
+    fn from(value: io::Error) -> Self {
+        Self::Io(value)
+    }
+}
+
+impl From<TemplateError> for BuildError {
+    fn from(value: TemplateError) -> Self {
+        match value {
+            TemplateError::Io(v) => Self::Io(v),
+            TemplateError::Parse(err) => Self::Parse { err, source: None },
+            TemplateError::Write(err) => Self::Write { err, source: None },
+            TemplateError::MissingProp(name) => Self::Other { msg: format!("Missing property {name}."), source: None },
+            TemplateError::MalformedProp(name) => Self::Other { msg: format!("Property '{name}' is non-alphanumeric or reserved.\n  (accepted: A-z 0-9 _; must not start with __)."), source: None },
+        }
+    }
+}
+
+impl Display for BuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(v) => write!(f, "I/O error: {v}"),
+            Self::Parse { err, source } => write!(
+                f,
+                "{err} in {}",
+                if let Some(source) = source {
+                    source
+                } else {
+                    ""
+                }
+            ),
+            Self::Write { err, source } => write!(
+                f,
+                "{err} in {}",
+                if let Some(source) = source {
+                    source
+                } else {
+                    ""
+                }
+            ),
+            Self::Other { msg, source } => write!(
+                f,
+                "{msg} in {}",
+                if let Some(source) = source {
+                    source
+                } else {
+                    ""
+                }
+            ),
+        }
+    }
+}
+
+pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
     if verbosity == Verbosity::High {
         println!("Creating output directory at {}", config.out.path);
     }
     if fs::metadata(&config.out.path).is_ok_and(|m| m.is_dir()) {
-        fs::remove_dir_all(&config.out.path).unwrap();
+        fs::remove_dir_all(&config.out.path)?;
     }
     let pages = copy_dir(
         &config.source.path,
@@ -47,8 +140,7 @@ pub fn build(verbosity: Verbosity, config: Config) {
             .chain(iter::once(&config.out.path))
             .collect(),
         verbosity,
-    )
-    .unwrap();
+    )?;
     if verbosity == Verbosity::High {
         println!("Done!");
     }
@@ -66,7 +158,9 @@ pub fn build(verbosity: Verbosity, config: Config) {
         config.xml.into(),
         config.out.lib_file.clone(),
     )
-    .unwrap();
+    .map_err(|err| {
+        BuildError::from(err).with_source(template_path.to_str().unwrap_or("").to_string())
+    })?;
     if verbosity == Verbosity::High {
         println!("Done!");
     }
@@ -85,26 +179,28 @@ pub fn build(verbosity: Verbosity, config: Config) {
             vec![XmlEvent::Characters(String::from(
                 page_out
                     .strip_prefix(&config.out.path)
-                    .unwrap()
+                    .unwrap_or(&page_out)
                     .with_extension("")
                     .to_str()
-                    .unwrap(),
+                    .unwrap_or(""),
             ))],
         );
 
-        let source = BufReader::new(File::open(page.clone()).unwrap());
+        let source = BufReader::new(File::open(page.clone())?);
 
-        let out_json = BufWriter::new(File::create(page_out.with_extension("page.json")).unwrap());
+        let out_json = BufWriter::new(File::create(page_out.with_extension("page.json"))?);
 
         if verbosity == Verbosity::High {
-            println!("  {}", page.as_os_str().to_str().unwrap());
+            println!("  {}", page.as_os_str().to_str().unwrap_or(""));
         }
 
-        let out = BufWriter::new(File::create(page_out).unwrap());
+        let out = BufWriter::new(File::create(page_out)?);
 
         template
             .write_to_file(source, out, out_json, props)
-            .unwrap();
+            .map_err(|err| {
+                BuildError::from(err).with_source(page.to_str().unwrap_or("").to_string())
+            })?;
     }
     if verbosity == Verbosity::High {
         println!("Done!");
@@ -121,13 +217,12 @@ pub fn build(verbosity: Verbosity, config: Config) {
 
     let library = config.js.get_code() + include_str!("simple_router.js");
 
-    File::create(library_path)
-        .unwrap()
-        .write_all(library.as_bytes())
-        .unwrap();
+    File::create(library_path)?.write_all(library.as_bytes())?;
     if verbosity == Verbosity::High {
         println!("Done!");
     }
+
+    Ok(())
 }
 
 // From StackOverflow: https://stackoverflow.com/a/65192210
@@ -161,7 +256,7 @@ fn copy_dir(
         } else if !entry
             .path()
             .extension()
-            .is_some_and(|ext| ext.to_str().unwrap() == "html")
+            .is_some_and(|ext| ext.to_str().unwrap_or("") == "html")
         {
             if verbosity == Verbosity::High {
                 println!(
