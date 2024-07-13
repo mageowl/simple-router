@@ -16,15 +16,20 @@ mod xml;
 fn main() {
     let time_start = Instant::now();
 
-    let config_file = fs::read_to_string("simple-router.toml")
+    let config = fs::read_to_string("simple-router.toml")
         .expect("No config file found at ./simple-router.toml");
-    let config: Config = toml::from_str(&config_file).expect("Failed to parse config file.");
+    let config: Config = toml::from_str(&config).expect("Failed to parse config file.");
 
     println!("Creating output directory at {}", config.out.path);
     if fs::metadata(&config.out.path).is_ok_and(|m| m.is_dir()) {
         fs::remove_dir_all(&config.out.path).unwrap();
     }
-    let pages = copy_dir(&config.source.path, &config.out.path).unwrap();
+    let pages = copy_dir(
+        &config.source.path,
+        &config.out.path,
+        &config.source.exclude,
+    )
+    .unwrap();
     println!("Done!");
 
     print!("Parsing template at {} ", config.source.template);
@@ -97,7 +102,11 @@ fn main() {
 }
 
 // From StackOverflow: https://stackoverflow.com/a/65192210
-fn copy_dir(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<Vec<(PathBuf, PathBuf)>> {
+fn copy_dir(
+    src: impl AsRef<Path>,
+    dst: impl AsRef<Path>,
+    exclude: &Vec<impl AsRef<Path>>,
+) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     fs::create_dir_all(&dst)?;
     let mut pages = Vec::new();
 
@@ -105,10 +114,15 @@ fn copy_dir(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<Vec<(Pat
         let entry = entry?;
         let ty = entry.file_type()?;
 
+        if exclude.contains(entry.path()) {
+            continue;
+        }
+
         if ty.is_dir() {
             pages.append(&mut copy_dir(
                 entry.path(),
                 dst.as_ref().join(entry.file_name()),
+                exclude,
             )?);
         } else if !entry
             .path()
