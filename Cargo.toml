@@ -1,6 +1,6 @@
 [package]
 name = "simple-router"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "A very, very rudementary SSG built in Rust & vanilla JavaScript."
 license = "MIT"
