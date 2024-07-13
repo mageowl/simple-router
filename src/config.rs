@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use xml::ParserConfig;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Config {
     pub out: OutConfig,
     #[serde(default)]
@@ -10,7 +10,7 @@ pub struct Config {
     pub xml: XmlConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct SourceConfig {
     pub path: String,
@@ -28,7 +28,7 @@ impl Default for SourceConfig {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct OutConfig {
     pub path: String,
     #[serde(default = "default_js_lib_path")]
@@ -39,7 +39,7 @@ fn default_js_lib_path() -> String {
     String::from("simple-router.js")
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 #[serde(default)]
 pub struct XmlConfig {
     pub ignore_comments: bool,

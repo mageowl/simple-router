@@ -1,150 +1,79 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{self, BufReader, BufWriter, Write},
-    iter,
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::{fs, time::Instant};
 
-use ::xml::reader::XmlEvent;
+use build::Verbosity;
+use clap::{crate_name, crate_version, value_parser, Arg, Command};
 use config::Config;
-use xml::Template;
 
+mod build;
 mod config;
+mod server;
 mod xml;
 
 fn main() {
-    let time_start = Instant::now();
+    let mut cmd = Command::new(crate_name!())
+        .subcommand(
+            Command::new("build").about("Build static site.").arg(
+                Arg::new("verbosity")
+                    .long("verbosity")
+                    .short('v')
+                    .value_parser(["silent", "low", "high"])
+                    .default_value("high"),
+            ),
+        )
+        .subcommand(
+            Command::new("dev")
+                .about("Launch live web server.")
+                .arg(
+                    Arg::new("port")
+                        .long("port")
+                        .value_parser(value_parser!(u16))
+                        .default_value("3000"),
+                )
+                .arg(Arg::new("host").long("host").default_value("localhost")),
+        )
+        .version(crate_version!());
+    let matches = cmd.get_matches_mut();
 
-    let config = fs::read_to_string("simple-router.toml")
-        .expect("No config file found at ./simple-router.toml");
-    let config: Config = toml::from_str(&config).expect("Failed to parse config file.");
+    let config = get_config();
 
-    println!("Creating output directory at {}", config.out.path);
-    if fs::metadata(&config.out.path).is_ok_and(|m| m.is_dir()) {
-        fs::remove_dir_all(&config.out.path).unwrap();
-    }
-    let pages = copy_dir(
-        &config.source.path,
-        &config.out.path,
-        &config
-            .source
-            .exclude
-            .iter()
-            .chain(iter::once(&config.out.path))
-            .collect(),
-    )
-    .unwrap();
-    println!("Done!");
+    match matches.subcommand() {
+        Some(("build", subcmd)) => {
+            let verbosity: Verbosity = subcmd
+                .get_one::<String>("verbosity")
+                .unwrap()
+                .as_str()
+                .try_into()
+                .expect("Verbosity level must be silent, low, or high.");
 
-    let template_path =
-        Into::<PathBuf>::into(config.source.path.clone()).join(&config.source.template);
-    print!(
-        "Parsing template at {} ",
-        template_path.to_str().unwrap_or("")
-    );
-    let template = Template::parse_from_file(
-        &template_path,
-        config.xml.into(),
-        config.out.lib_file.clone(),
-    )
-    .unwrap();
-    println!("Done!");
+            if verbosity >= Verbosity::Low {
+                println!("\x1b[35mBuilding static site...\x1b[0m");
+            }
+            let time_start = Instant::now();
 
-    println!("Generating static site in {} ", config.out.path);
-    for (page, page_out) in pages {
-        if page == template_path {
-            continue;
+            build::build(verbosity, config);
+
+            if verbosity >= Verbosity::Low {
+                println!(
+                    "\x1b[32mWebsite built in {:.2}s.\x1b[0m",
+                    time_start.elapsed().as_secs_f64()
+                )
+            }
         }
-
-        let mut props = HashMap::new();
-        props.insert(
-            "__path".to_string(),
-            vec![XmlEvent::Characters(String::from(
-                page_out
-                    .strip_prefix(&config.out.path)
-                    .unwrap()
-                    .with_extension("")
-                    .to_str()
-                    .unwrap(),
-            ))],
-        );
-
-        let source = BufReader::new(File::open(page.clone()).unwrap());
-
-        let out_json = BufWriter::new(File::create(page_out.with_extension("page.json")).unwrap());
-
-        println!("  {}", page.as_os_str().to_str().unwrap());
-        let out = BufWriter::new(File::create(page_out).unwrap());
-
-        template
-            .write_to_file(source, out, out_json, props)
-            .unwrap();
+        Some(("dev", subcmd)) => {
+            println!("\x1b[36mStarting web server...\x1b[0m");
+            server::start(
+                *subcmd.get_one("port").unwrap(),
+                subcmd.get_one::<String>("host").unwrap().clone(),
+                config,
+            );
+        }
+        None => cmd.print_help().unwrap(),
+        _ => (),
     }
-    println!("Done!");
-
-    let mut library_path = PathBuf::from(&config.out.path);
-    library_path.push(&config.out.lib_file);
-    print!(
-        "Adding library file at {} ",
-        library_path.to_str().unwrap_or("")
-    );
-    File::create(library_path)
-        .unwrap()
-        .write_all(include_bytes!("simple_router.js"))
-        .unwrap();
-    println!("Done!");
-
-    println!(
-        "Generation finished in {:.1}s.",
-        time_start.elapsed().as_secs_f64()
-    )
 }
 
-// From StackOverflow: https://stackoverflow.com/a/65192210
-fn copy_dir(
-    src: impl AsRef<Path>,
-    dst: impl AsRef<Path>,
-    exclude: &Vec<&String>,
-) -> io::Result<Vec<(PathBuf, PathBuf)>> {
-    fs::create_dir_all(&dst)?;
-    let mut pages = Vec::new();
-
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-
-        if exclude
-            .iter()
-            .any(|d| entry.path().starts_with(String::from("./") + d))
-        {
-            continue;
-        }
-
-        if ty.is_dir() {
-            pages.append(&mut copy_dir(
-                entry.path(),
-                dst.as_ref().join(entry.file_name()),
-                exclude,
-            )?);
-        } else if !entry
-            .path()
-            .extension()
-            .is_some_and(|ext| ext.to_str().unwrap() == "html")
-        {
-            println!(
-                "  {}",
-                dst.as_ref()
-                    .join(entry.file_name())
-                    .to_str()
-                    .unwrap_or("???")
-            );
-            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            pages.push((entry.path(), dst.as_ref().join(entry.file_name())));
-        }
-    }
-
-    Ok(pages)
+fn get_config() -> Config {
+    let config = fs::read_to_string("simple-router.toml")
+        .expect("No config file found at ./simple-router.toml");
+    toml::from_str(&config).expect("Failed to parse config file.")
 }
