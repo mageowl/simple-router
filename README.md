@@ -20,7 +20,8 @@ exclude = [] # list of paths to exclude from
 ignore_comments = true # remove comments from html
 
 [js] # optional.
-update_achors = true # automatically update all <a> elements to use the router.
+update_anchors = true # automatically update all <a> elements to use the router.
+not_found = "404.html" # path to 404 page. needs to be the same as hosting provider's!
 ```
 
 ## Templating
