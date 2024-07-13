@@ -81,8 +81,11 @@ window.router = {
   },
 };
 
-window.addEventListener("load", router._updateLinks);
-window.addEventListener("navigate", router._updateLinks);
+if (config.updateAnchors) {
+  window.addEventListener("load", router._updateLinks);
+  window.addEventListener("navigate", router._updateLinks);
+}
+
 window.addEventListener("popstate", (e) => {
   if (e.state.dataURL != null) {
     router._load(e.state.dataURL);

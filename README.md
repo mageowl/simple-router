@@ -18,6 +18,9 @@ exclude = [] # list of paths to exclude from
 
 [xml] # optional.
 ignore_comments = true # remove comments from html
+
+[js] # optional.
+update_achors = true # automatically update all <a> elements to use the router.
 ```
 
 ## Templating

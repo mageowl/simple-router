@@ -118,9 +118,12 @@ pub fn build(verbosity: Verbosity, config: Config) {
             library_path.to_str().unwrap_or("")
         );
     }
+
+    let library = config.js.get_code() + include_str!("simple_router.js");
+
     File::create(library_path)
         .unwrap()
-        .write_all(include_bytes!("simple_router.js"))
+        .write_all(library.as_bytes())
         .unwrap();
     if verbosity == Verbosity::High {
         println!("Done!");

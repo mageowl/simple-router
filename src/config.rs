@@ -8,6 +8,8 @@ pub struct Config {
     pub source: SourceConfig,
     #[serde(default)]
     pub xml: XmlConfig,
+    #[serde(default)]
+    pub js: JsConfig,
 }
 
 #[derive(Deserialize, Clone)]
@@ -58,6 +60,33 @@ impl Into<ParserConfig> for XmlConfig {
         ParserConfig {
             ignore_comments: self.ignore_comments,
             ..Default::default()
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy)]
+#[serde(default)]
+pub struct JsConfig {
+    pub update_anchors: bool,
+}
+
+impl JsConfig {
+    pub fn get_code(&self) -> String {
+        format!(
+            r#"const config = {{
+    updateAnchors: {update_anchors},
+}};
+
+"#,
+            update_anchors = self.update_anchors
+        )
+    }
+}
+
+impl Default for JsConfig {
+    fn default() -> Self {
+        Self {
+            update_anchors: true,
         }
     }
 }
