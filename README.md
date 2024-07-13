@@ -29,11 +29,13 @@ By default, `layout.html` is a special file that contains the template for the p
 
 <html>
     <head>
-        <title sr-prop="title" /> <!-- This is a placeholder (denoted by sr-prop="name"). When the page gets loaded, the contents of this element will be replaced. -->
+        <!-- This is a placeholder (denoted by sr-prop="name").
+             When the page gets loaded, the contents of this element will be replaced. -->
+        <title sr-prop="title" /> 
     </head>
     <body>
         <!-- Properties starting with '__' are special. 
-            - `__page` = Current path -->
+             - `__page` = Current path -->
         <h1 sr-prop="__page" /> 
         <div sr-prop="content" />
     </body>
@@ -42,9 +44,10 @@ By default, `layout.html` is a special file that contains the template for the p
 <!-- index.html -->
 
 <content> <!-- Elements at the root of a page are considered "properties" -->
-    <p>Templating is so cool!</p> <!-- Placeholders will be filled in using properties of the same name. -->
+    <!-- Placeholders will be filled in using properties of the same name. -->
+    <p>Templating is so cool!</p> 
 </content>
-<title>Hello World</title>  <!-- placeholders can contain both plain text and html. -->
+<title>Hello World</title>  <!-- Placeholders can contain both plain text and html. -->
 
 ```
 
