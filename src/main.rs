@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::{self, BufReader, BufWriter, Write},
+    iter,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -31,6 +32,7 @@ fn main() {
             .source
             .exclude
             .iter()
+            .chain(iter::once(&config.out.path))
             .map(|p| PathBuf::from(p))
             .collect(),
     )
