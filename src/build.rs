@@ -3,7 +3,6 @@ use std::{
     fmt::Display,
     fs::{self, File},
     io::{self, BufReader, BufWriter, Write},
-    iter,
     path::{Path, PathBuf},
 };
 
@@ -137,7 +136,8 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
             .source
             .exclude
             .iter()
-            .chain(iter::once(&config.out.path))
+            .map(|s| s.as_str())
+            .chain([&config.out.path, "simple-router.toml"].into_iter())
             .collect(),
         verbosity,
     )?;
@@ -227,11 +227,11 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
     Ok(())
 }
 
-// From StackOverflow: https://stackoverflow.com/a/65192210
+// From StackOverflow: https://stackoverflow.com/a/65192210 + modifications
 fn copy_dir(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
-    exclude: &Vec<&String>,
+    exclude: &Vec<&str>,
     verbosity: Verbosity,
 ) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     fs::create_dir_all(&dst)?;
