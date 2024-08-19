@@ -1,7 +1,7 @@
 use std::{
     ffi::OsStr,
     fs,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     iter,
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
@@ -61,11 +61,11 @@ fn listen(port: u16, hostname: String, directory: &Path, not_found: &Path) {
         let mut stream = stream.unwrap();
         let response = handle_connection(&mut stream, directory, not_found);
 
-        stream.write_all(response.as_bytes()).unwrap();
+        stream.write_all(&response).unwrap();
     }
 }
 
-fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path) -> String {
+fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path) -> Vec<u8> {
     let buf_reader = BufReader::new(stream);
     let request: Vec<_> = buf_reader
         .lines()
@@ -75,7 +75,7 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
 
     let req_header: Vec<&str> = request[0].split(" ").collect();
     let [method, path, ..] = &req_header[..] else {
-        return String::from("HTTP/1.1 500 BAD REQUEST");
+        return b"HTTP/1.1 500 BAD REQUEST".to_vec();
     };
 
     match *method {
@@ -97,7 +97,9 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
                     return format!(
                         "HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}",
                         path = path.to_string(),
-                    );
+                    )
+                    .as_bytes()
+                    .to_vec();
                 }
             } else if file.extension() == Some(OsStr::new("html"))
                 || file.extension() == Some(OsStr::new("json"))
@@ -109,14 +111,22 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
             let mime_type = MimeGuess::from_path(&file)
                 .first()
                 .map_or(String::new(), |mime| mime.essence_str().to_owned());
-            let contents = fs::read_to_string(file).unwrap();
+            let mut contents = fs::read(file).unwrap();
             let length = contents.len();
 
-            format!("{status}\r\nContent-Length: {length}\r\nContent-Type: {mime_type}\r\n\r\n{contents}")
+            let mut response = format!(
+                "{status}\r\nContent-Length: {length}\r\nContent-Type: {mime_type}\r\n\r\n"
+            )
+            .as_bytes()
+            .to_vec();
+            response.append(&mut contents);
+            response
         }
         _ => {
             println!("\x1b[31m[{method}]\x1b[0m {path}");
             format!("HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}")
+                .as_bytes()
+                .to_vec()
         }
     }
 }
