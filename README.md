@@ -7,6 +7,8 @@ A very, _very_ rudementary [SSG](https://www.cloudflare.com/learning/performance
 The configuration file is located at `simple-router.toml`, and must be created for the application to work.
 
 ```toml
+library_version = "0.1.11" # required! make sure this is up to date.
+
 [out] # required!
 path = "path/to/output/" # required! path to output directory
 lib_file = "simple-router.js" # optional. name of JS library file relative to output directory

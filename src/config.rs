@@ -3,6 +3,7 @@ use xml::ParserConfig;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
+    pub library_version: String,
     pub out: OutConfig,
     #[serde(default)]
     pub source: SourceConfig,

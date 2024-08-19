@@ -34,7 +34,13 @@ fn main() {
         .version(crate_version!());
     let matches = cmd.get_matches_mut();
 
-    let config = get_config();
+    let config = match get_config() {
+        Ok(c) => c,
+        Err(msg) => {
+            println!("\x1b[31mError reading config\x1b[0m: {msg}");
+            return;
+        }
+    };
 
     match matches.subcommand() {
         Some(("build", subcmd)) => {
@@ -53,7 +59,7 @@ fn main() {
             let result = build::build(verbosity, config);
 
             if let Err(err) = result {
-                println!("\n\x1b[31mErrors while building static site: {err}.\x1b[0m");
+                println!("\n\x1b[31mErrors while building static site\x1b[0m: {err}.");
             } else {
                 if verbosity >= Verbosity::Low {
                     println!(
@@ -75,8 +81,18 @@ fn main() {
     }
 }
 
-fn get_config() -> Config {
-    let config = fs::read_to_string("simple-router.toml")
-        .expect("No config file found at ./simple-router.toml");
-    toml::from_str(&config).expect("Failed to parse config file.")
+fn get_config() -> Result<Config, String> {
+    let file = fs::read_to_string("simple-router.toml")
+        .map_err(|_| String::from("No file found at ./simple-router.toml."))?;
+    let config: Config = toml::from_str(&file).map_err(|e| e.message().to_owned())?;
+
+    if config.library_version != crate_version!() {
+        Err(format!(
+            "Incorrect config version. Using version {crate}, but config is on {conf}.",
+            crate = crate_version!(),
+            conf = config.library_version
+        ))
+    } else {
+        Ok(config)
+    }
 }

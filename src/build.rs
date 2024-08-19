@@ -90,7 +90,7 @@ impl From<TemplateError> for BuildError {
 impl Display for BuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Io(v) => write!(f, "I/O error: {v}"),
+            Self::Io(v) => v.fmt(f),
             Self::Parse { err, source } => write!(
                 f,
                 "{err} in {}",

@@ -1,7 +1,7 @@
 use std::{
     ffi::OsStr,
     fs,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Write},
     iter,
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
