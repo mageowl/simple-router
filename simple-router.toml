@@ -1,7 +1,9 @@
-library_version = "0.1.11"
+library_version = "0.1.12"
 
 [source]
-path = "test/"
+static_path = "test/"
+pages_path = "test/pages/"
+template = "test/layout.html"
 
 [out]
 path = "test_out/"

@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs::File,
     io::{self, BufReader, BufWriter, Write},
     path::Path,
@@ -91,36 +91,38 @@ impl Template {
                     attributes,
                     namespace,
                 } => {
-                    let mut placeholder = String::new();
+                    let mut placeholder = None;
                     for OwnedAttribute {
                         name: attr_name,
                         value,
                     } in &attributes
                     {
                         if attr_name.to_string() == "sr-prop" {
-                            placeholder = value.to_string();
+                            placeholder = Some(value.to_string());
                             break;
                         }
                     }
 
-                    if placeholder == "" {
+                    if let Some(placeholder) = placeholder {
+                        if !placeholder.chars().all(|c| c.is_alphanumeric() || c == '_')
+                            || (placeholder.starts_with("__")
+                                && !Self::PROPS_SPECIAL.contains(&placeholder.as_str()))
+                        {
+                            return Err(TemplateError::MalformedProp(placeholder));
+                        } else {
+                            events.push(TemplateEvent::StartPlaceholder {
+                                prop: placeholder,
+                                name,
+                                attributes,
+                                namespace,
+                            });
+                        }
+                    } else {
                         events.push(TemplateEvent::Xml(XmlEvent::StartElement {
                             name,
                             attributes,
                             namespace,
                         }))
-                    } else if !placeholder.chars().all(|c| c.is_alphanumeric() || c == '_')
-                        || (placeholder.starts_with("__")
-                            && !Self::PROPS_SPECIAL.contains(&placeholder.as_str()))
-                    {
-                        return Err(TemplateError::MalformedProp(placeholder));
-                    } else {
-                        events.push(TemplateEvent::StartPlaceholder {
-                            prop: placeholder,
-                            name,
-                            attributes,
-                            namespace,
-                        });
                     }
                 }
                 XmlEvent::EndElement { name } => {
@@ -267,7 +269,8 @@ impl Template {
             }
         }
 
-        serde_json::to_writer(out_json, &json_map).unwrap();
+        let ordered: BTreeMap<_, _> = json_map.iter().collect();
+        serde_json::to_writer(out_json, &ordered).unwrap();
 
         Ok(())
     }

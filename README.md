@@ -7,14 +7,15 @@ A very, _very_ rudementary [SSG](https://www.cloudflare.com/learning/performance
 The configuration file is located at `simple-router.toml`, and must be created for the application to work.
 
 ```toml
-library_version = "0.1.11" # required! make sure this is up to date.
+library_version = "0.1.12" # required! make sure this is up to date.
 
 [out] # required!
 path = "path/to/output/" # required! path to output directory
 lib_file = "simple-router.js" # optional. name of JS library file relative to output directory
 
 [source] # optional.
-path = "." # path to the source directory
+static_path = "." # path to the static directory (files that will not be modified by simple router)
+pages_path = "./pages/" # path to pages directory.
 template = "layout.html" # path to template HTML file
 exclude = [] # list of paths to exclude from 
 
@@ -28,7 +29,7 @@ not_found = "404.html" # path to 404 page. needs to be the same as hosting provi
 
 ## Templating
 
-By default, `layout.html` is a special file that contains the template for the page. All other html files are considered pages.
+By default, `layout.html` is a special file that contains the template for the page. All files inside the ./pages/ folder by default are considered pages.
 
 ```html
 <!-- layout.html -->
@@ -47,7 +48,7 @@ By default, `layout.html` is a special file that contains the template for the p
     </body>
 </html>
 
-<!-- index.html -->
+<!-- pages/index.html -->
 
 <content> <!-- Elements at the root of a page are considered "properties" -->
     <!-- Placeholders will be filled in using properties of the same name. -->

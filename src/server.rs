@@ -48,7 +48,7 @@ pub fn start(port: u16, hostname: String, config: Config) {
 
     debouncer
         .watcher()
-        .watch(Path::new(&config.source.path), RecursiveMode::Recursive)
+        .watch(Path::new("."), RecursiveMode::Recursive)
         .unwrap();
 
     loop {}
@@ -90,7 +90,7 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
             if !file.exists() {
                 println!(
                     "\x1b[31m[404]\x1b[0m Not found: ./{}",
-                    file.to_str().unwrap()
+                    file.to_string_lossy()
                 );
                 file = directory.join(not_found);
                 if !file.exists() {
@@ -104,7 +104,7 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
             } else if file.extension() == Some(OsStr::new("html"))
                 || file.extension() == Some(OsStr::new("json"))
             {
-                println!("\x1b[32m[GET]\x1b[0m ./{}", file.to_str().unwrap());
+                println!("\x1b[32m[GET]\x1b[0m ./{}", file.to_string_lossy());
             }
 
             let status = "HTTP/1.1 200 OK";

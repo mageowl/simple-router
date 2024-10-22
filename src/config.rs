@@ -16,7 +16,8 @@ pub struct Config {
 #[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct SourceConfig {
-    pub path: String,
+    pub static_path: String,
+    pub pages_path: String,
     pub template: String,
     pub exclude: Vec<String>,
 }
@@ -24,7 +25,8 @@ pub struct SourceConfig {
 impl Default for SourceConfig {
     fn default() -> Self {
         Self {
-            path: String::from("."),
+            static_path: String::from("."),
+            pages_path: String::from("pages"),
             template: String::from("layout.html"),
             exclude: Vec::new(),
         }
