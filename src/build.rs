@@ -146,7 +146,6 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
             source: None,
         });
     }
-    fs::create_dir_all(&config.out.path)?;
 
     for (file, out) in scan_dir(
         &config.source.static_path,
@@ -271,6 +270,7 @@ fn scan_dir(
     verbosity: Verbosity,
 ) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     let mut entries = Vec::new();
+    fs::create_dir_all(dst.as_ref())?;
 
     for entry in fs::read_dir(src)? {
         let entry = entry?;
@@ -292,7 +292,10 @@ fn scan_dir(
             )?);
         } else {
             if verbosity == Verbosity::High {
-                println!("  {}", dst.as_ref().to_string_lossy());
+                println!(
+                    "  {}",
+                    dst.as_ref().join(entry.file_name()).to_string_lossy()
+                );
             }
             entries.push((entry.path(), dst.as_ref().join(entry.file_name())));
         }
