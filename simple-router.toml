@@ -1,4 +1,4 @@
-library_version = "0.1.12"
+library_version = "0.1.13"
 
 [source]
 static_path = "test/"
