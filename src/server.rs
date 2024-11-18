@@ -2,20 +2,25 @@ use std::{
     ffi::OsStr,
     fs,
     io::{BufRead, BufReader, Write},
-    iter,
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
+    sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
 
 use mime_guess::MimeGuess;
-use notify_debouncer_mini::{notify::RecursiveMode, DebounceEventResult};
+use notify::{RecursiveMode, Watcher};
 
 use crate::{
     build::{self, Verbosity},
     config::Config,
 };
+
+fn join(mut a: PathBuf, b: impl AsRef<Path>) -> PathBuf {
+    a.push(b);
+    a
+}
 
 pub fn start(port: u16, hostname: String, config: Config) {
     println!("\x1b[35m[BUILD]\x1b[0m Buildng website...");
@@ -34,24 +39,49 @@ pub fn start(port: u16, hostname: String, config: Config) {
 
     let directory: PathBuf = config.out.path.clone().into();
     let not_found: PathBuf = config.js.not_found.clone().into();
-    thread::spawn(move || listen(port, hostname, &directory, &not_found));
+    let server_handle = thread::spawn(move || listen(port, hostname, &directory, &not_found));
 
-    let cfg = config.clone();
-    let mut skip_next = false;
-    let mut debouncer = notify_debouncer_mini::new_debouncer(Duration::from_secs(1), move |res| {
-        if !skip_next {
-            handle_file_update(cfg.clone(), res);
-        }
-        skip_next = !skip_next;
-    })
-    .unwrap();
+    let current_dir: PathBuf = fs::canonicalize(String::from("."))
+        .expect("failed to get directory")
+        .into();
+    let mut excludes = Vec::new();
+    excludes.push(join(current_dir.clone(), Path::new(&config.out.path)));
+    for path in &config.source.exclude {
+        excludes.push(join(current_dir.clone(), path));
+    }
 
-    debouncer
-        .watcher()
+    let (tx, rx) = mpsc::channel();
+    let pages_path = fs::canonicalize(&config.source.pages_path).expect("Failed to get directory");
+    let static_path =
+        fs::canonicalize(&config.source.static_path).expect("Failed to get directory");
+
+    let mut watcher = notify::recommended_watcher(tx).expect("Failed to listen for events");
+    watcher
         .watch(Path::new("."), RecursiveMode::Recursive)
-        .unwrap();
+        .expect("Failed to start watcher");
 
-    loop {}
+    let mut last_build: Option<Instant> = None;
+    thread::spawn(move || {
+        for res in rx {
+            match res {
+                Ok(event) => {
+                    if !event.kind.is_access()
+                        && !last_build.is_some_and(|d| d.elapsed() < Duration::from_secs(1))
+                        && event.paths.iter().any(|ev| {
+                            !excludes.iter().any(|p| ev.starts_with(p))
+                                && (ev.starts_with(&pages_path) || ev.starts_with(&static_path))
+                        })
+                    {
+                        handle_file_update(config.clone());
+                        last_build = Some(Instant::now());
+                    }
+                }
+                Err(error) => println!("\x1b[35m[BUILD]\x1b[0m Error watching files: {error}"),
+            }
+        }
+    });
+
+    server_handle.join().expect("Failed to start server");
 }
 
 fn listen(port: u16, hostname: String, directory: &Path, not_found: &Path) {
@@ -131,33 +161,17 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
     }
 }
 
-fn handle_file_update(config: Config, res: DebounceEventResult) {
-    match res {
-        Ok(events) => {
-            if events.iter().any(|ev| {
-                !config
-                    .source
-                    .exclude
-                    .iter()
-                    .chain(iter::once(&config.out.path))
-                    .any(|d| ev.path.starts_with(String::from("./") + d))
-            }) {
-                println!("\x1b[35m[BUILD]\x1b[0m Changes detected, building...");
-                let time_start = Instant::now();
+fn handle_file_update(config: Config) {
+    println!("\x1b[35m[BUILD]\x1b[0m Changes detected, building...");
+    let time_start = Instant::now();
 
-                let result = build::build(Verbosity::Low, config.clone());
+    let result = build::build(Verbosity::Low, config.clone());
 
-                match result {
-                    Ok(_) => println!(
-                        "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
-                        time_start.elapsed().as_secs_f32()
-                    ),
-                    Err(err) => println!("\x1b[31m[BUILD FAILED]\x1b[31m {err}"),
-                }
-            }
-        }
-        Err(e) => {
-            println!("\x1b[35m[BUILD]\x1b[0m Error watching files: {e}");
-        }
+    match result {
+        Ok(_) => println!(
+            "\x1b[35m[BUILD]\x1b[0m Website built in {:.2}s.",
+            time_start.elapsed().as_secs_f32()
+        ),
+        Err(err) => println!("\x1b[31m[BUILD FAILED]\x1b[31m {err}"),
     }
 }

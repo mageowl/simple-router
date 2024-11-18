@@ -125,17 +125,19 @@ impl Display for BuildError {
 
 pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
     if let Some(cmd) = config.scripts.prebuild {
-        if verbosity >= Verbosity::Low {
+        if verbosity == Verbosity::High {
             println!("Running pre-build script... ");
-            let status = Command::new("sh").args(["-c", &cmd]).status()?;
-            if status.success() {
-                println!("Done!")
-            } else {
-                return Err(BuildError::Other {
-                    msg: format!("Pre build script failed with exit code {status}"),
-                    source: None,
-                });
+        }
+        let status = Command::new("sh").args(["-c", &cmd]).status()?;
+        if status.success() {
+            if verbosity == Verbosity::High {
+                println!("Done!");
             }
+        } else {
+            return Err(BuildError::Other {
+                msg: format!("Pre build script failed with exit code {status}"),
+                source: None,
+            });
         }
     }
 
@@ -276,18 +278,20 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
     }
 
     if let Some(cmd) = config.scripts.postbuild {
-        if verbosity >= Verbosity::Low {
+        if verbosity == Verbosity::High {
             println!("Running post-build script... ");
+        }
 
-            let status = Command::new("sh").args(["-c", &cmd]).status()?;
-            if status.success() {
-                println!("Done!")
-            } else {
-                return Err(BuildError::Other {
-                    msg: format!("Post-build script failed with exit code {status}"),
-                    source: None,
-                });
+        let status = Command::new("sh").args(["-c", &cmd]).status()?;
+        if status.success() {
+            if verbosity == Verbosity::High {
+                println!("Done!");
             }
+        } else {
+            return Err(BuildError::Other {
+                msg: format!("Post-build script failed with exit code {status}"),
+                source: None,
+            });
         }
     }
 
