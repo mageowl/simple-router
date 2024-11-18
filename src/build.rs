@@ -4,6 +4,7 @@ use std::{
     fs::{self, File},
     io::{self, BufReader, BufWriter, Write},
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use crate::xml::Template;
@@ -123,6 +124,21 @@ impl Display for BuildError {
 }
 
 pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
+    if let Some(cmd) = config.scripts.prebuild {
+        if verbosity >= Verbosity::Low {
+            println!("Running pre-build script... ");
+            let status = Command::new("sh").args(["-c", &cmd]).status()?;
+            if status.success() {
+                println!("Done!")
+            } else {
+                return Err(BuildError::Other {
+                    msg: format!("Pre build script failed with exit code {status}"),
+                    source: None,
+                });
+            }
+        }
+    }
+
     if verbosity == Verbosity::High {
         println!("Creating output directory at {}", config.out.path);
     }
@@ -257,6 +273,22 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
     File::create(library_path)?.write_all(&library)?;
     if verbosity == Verbosity::High {
         println!("Done!");
+    }
+
+    if let Some(cmd) = config.scripts.postbuild {
+        if verbosity >= Verbosity::Low {
+            println!("Running post-build script... ");
+
+            let status = Command::new("sh").args(["-c", &cmd]).status()?;
+            if status.success() {
+                println!("Done!")
+            } else {
+                return Err(BuildError::Other {
+                    msg: format!("Post-build script failed with exit code {status}"),
+                    source: None,
+                });
+            }
+        }
     }
 
     Ok(())

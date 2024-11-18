@@ -11,6 +11,8 @@ pub struct Config {
     pub xml: XmlConfig,
     #[serde(default)]
     pub js: JsConfig,
+    #[serde(default)]
+    pub scripts: ScriptsConfig,
 }
 
 #[derive(Deserialize, Clone)]
@@ -99,4 +101,11 @@ impl Default for JsConfig {
             not_found: String::from("404.html"),
         }
     }
+}
+
+#[derive(Deserialize, Default, Clone)]
+#[serde(default)]
+pub struct ScriptsConfig {
+    pub prebuild: Option<String>,
+    pub postbuild: Option<String>,
 }

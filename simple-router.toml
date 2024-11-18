@@ -1,5 +1,9 @@
 library_version = "0.1.13"
 
+[scripts]
+prebuild = "echo hello from prebuild"
+postbuild = "echo hello from postbuild"
+
 [source]
 static_path = "test/"
 pages_path = "test/pages/"

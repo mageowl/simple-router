@@ -7,7 +7,7 @@ A very, _very_ rudementary [SSG](https://www.cloudflare.com/learning/performance
 The configuration file is located at `simple-router.toml`, and must be created for the application to work.
 
 ```toml
-library_version = "0.1.12" # required! make sure this is up to date.
+library_version = "0.1.13" # required! make sure this is up to date.
 
 [out] # required!
 path = "path/to/output/" # required! path to output directory
@@ -25,6 +25,10 @@ ignore_comments = true # remove comments from html
 [js] # optional.
 update_anchors = true # automatically update all <a> elements to use the router.
 not_found = "404.html" # path to 404 page. needs to be the same as hosting provider's!
+
+[scripts] # optional.
+prebuild = "echo hello world" # command is run using sh, before simple-router does anything.
+postbuild = "echo goodbye world" # after all files are in the docs folder.
 ```
 
 ## Templating
