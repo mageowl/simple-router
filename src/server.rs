@@ -117,7 +117,7 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
                 file.push("index.html")
             }
 
-            if !file.exists() {
+            let status = if !file.exists() {
                 println!(
                     "\x1b[31m[404]\x1b[0m Not found: ./{}",
                     file.to_string_lossy()
@@ -130,14 +130,18 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
                     )
                     .as_bytes()
                     .to_vec();
+                } else {
+                    "HTTP/1.1 404 NOT FOUND"
                 }
             } else if file.extension() == Some(OsStr::new("html"))
                 || file.extension() == Some(OsStr::new("json"))
             {
                 println!("\x1b[32m[GET]\x1b[0m ./{}", file.to_string_lossy());
-            }
+                "HTTP/1.1 200 OK"
+            } else {
+                "HTTP/1.1 200 OK"
+            };
 
-            let status = "HTTP/1.1 200 OK";
             let mime_type = MimeGuess::from_path(&file)
                 .first()
                 .map_or(String::new(), |mime| mime.essence_str().to_owned());

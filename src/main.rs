@@ -86,7 +86,12 @@ fn get_config() -> Result<Config, String> {
         .map_err(|_| String::from("No file found at ./simple-router.toml."))?;
     let config: Config = toml::from_str(&file).map_err(|e| e.message().to_owned())?;
 
-    if config.library_version != crate_version!() {
+    let major_version = crate_version!()
+        .split(".")
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(".");
+    if config.library_version != major_version {
         Err(format!(
             "Incorrect config version. Using version {crate}, but config is on {conf}.",
             crate = crate_version!(),
