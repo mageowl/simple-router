@@ -60,10 +60,10 @@ impl Default for XmlConfig {
     }
 }
 
-impl Into<ParserConfig> for XmlConfig {
-    fn into(self) -> ParserConfig {
+impl From<XmlConfig> for ParserConfig {
+    fn from(val: XmlConfig) -> Self {
         ParserConfig {
-            ignore_comments: self.ignore_comments,
+            ignore_comments: val.ignore_comments,
             ..Default::default()
         }
     }

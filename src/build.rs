@@ -253,7 +253,8 @@ pub fn build(verbosity: Verbosity, config: Config) -> Result<(), BuildError> {
 
         let is_404 = page_out.ends_with(Path::new(&config.js.not_found));
 
-        let out = BufWriter::new(File::create(page_out)?);
+        let mut out = BufWriter::new(File::create(page_out)?);
+        out.write_all(b"<!doctype html>")?;
 
         template
             .write_to_file(source, out, out_json, props, is_404)

@@ -165,11 +165,8 @@ impl Template {
 
         for event in parser {
             if current_prop.is_none() {
-                match event? {
-                    XmlEvent::StartElement { name, .. } => {
-                        current_prop = Some(name.to_string());
-                    }
-                    _ => (),
+                if let XmlEvent::StartElement { name, .. } = event? {
+                    current_prop = Some(name.to_string());
                 }
             } else {
                 match event? {

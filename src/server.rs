@@ -35,15 +35,13 @@ pub fn start(port: u16, hostname: String, config: Config) {
         );
     }
 
-    println!("\x1b[36m[SERVER]\x1b[0m Starting web server...");
+    println!("\x1b[36m[SERVER]\x1b[0m Starting web server at {hostname}:{port}...");
 
     let directory: PathBuf = config.out.path.clone().into();
     let not_found: PathBuf = config.js.not_found.clone().into();
     let server_handle = thread::spawn(move || listen(port, hostname, &directory, &not_found));
 
-    let current_dir: PathBuf = fs::canonicalize(String::from("."))
-        .expect("failed to get directory")
-        .into();
+    let current_dir = fs::canonicalize(String::from(".")).expect("failed to get directory");
     let mut excludes = Vec::new();
     excludes.push(join(current_dir.clone(), Path::new(&config.out.path)));
     for path in &config.source.exclude {
@@ -66,7 +64,7 @@ pub fn start(port: u16, hostname: String, config: Config) {
             match res {
                 Ok(event) => {
                     if !event.kind.is_access()
-                        && !last_build.is_some_and(|d| d.elapsed() < Duration::from_secs(1))
+                        && last_build.is_none_or(|d| d.elapsed() >= Duration::from_secs(1))
                         && event.paths.iter().any(|ev| {
                             !excludes.iter().any(|p| ev.starts_with(p))
                                 && (ev.starts_with(&pages_path) || ev.starts_with(&static_path))
@@ -124,12 +122,9 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
                 );
                 file = directory.join(not_found);
                 if !file.exists() {
-                    return format!(
-                        "HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}",
-                        path = path.to_string(),
-                    )
-                    .as_bytes()
-                    .to_vec();
+                    return format!("HTTP/1.1 404 NOT FOUND\r\n\r\nCannot {method} {path}",)
+                        .as_bytes()
+                        .to_vec();
                 } else {
                     "HTTP/1.1 404 NOT FOUND"
                 }
