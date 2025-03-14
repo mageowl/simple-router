@@ -100,6 +100,9 @@ fn handle_connection(stream: &mut TcpStream, directory: &Path, not_found: &Path)
         .map(|result| result.unwrap())
         .take_while(|line| !line.is_empty())
         .collect();
+    if request.is_empty() {
+        return b"HTTP/1.1 400 BAD REQUEST\r\n\r\n".to_vec();
+    }
 
     let req_header: Vec<&str> = request[0].split(" ").collect();
     let [method, path, ..] = &req_header[..] else {
